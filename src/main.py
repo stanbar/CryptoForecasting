@@ -1,7 +1,7 @@
 import asyncio
 from datetime import date
 
-from src.api.coinpaprika import CoinpaprikaApi, History
+from src.api.coinpaprika import CoinpaprikaApi
 
 
 async def main():
