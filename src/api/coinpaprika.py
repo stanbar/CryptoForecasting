@@ -17,6 +17,38 @@ class CoinpaprikaApi:
         self.request_second = 0
         self.headers = {'Accept': 'application/json', 'Accept-Charset': 'utf-8'}
 
+    async def get_coin_history(self, coin_id: str,
+                               start: date = date(year=2009, month=1, day=1),  # it doesnt accept anything before
+                               end: date = date.today(),
+                               limit: int = 5000,
+                               quote: str = "usd",
+                               interval: str = '1d'):
+        return await self.with_limit(self._get_coin_history, coin_id, start, end, limit, quote, interval)
+
+    async def _get_coin_history(self, coin_id: str, start: date, end: date, limit: int, quote: str, interval: str):
+        url = f'{self.host}/{self.version}/tickers/{coin_id}/historical'
+        async with aiohttp.ClientSession(headers=self.headers) as session:
+            print(f'[{time.asctime()}] Send request on {url}')
+            async with session.request('GET', url=url,
+                                       params={
+                                           'start': f'{start:%Y-%m-%d}',
+                                           'end': f'{end:%Y-%m-%d}',
+                                           'limit': limit,
+                                           'quote': quote,
+                                           'interval': interval
+                                       }) as res:
+
+                print(f'[{time.asctime()}] {coin_id} fetched with status {res.status}')
+                json_object = await res.json()
+
+                if res.status == 404:  # no history found for this coin, don't raise exception
+                    return []
+
+                if type(json_object) == dict:  # unhandled exception, raise
+                    raise Exception(json_object['error'])
+
+                return json_object
+
     async def get_ohlc(self, coin_id: str,
                        start: date = date(year=2009, month=1, day=1),  # it doesnt accept anything before
                        end: date = date.today(),
@@ -47,26 +79,14 @@ class CoinpaprikaApi:
 
                 return json_object
 
-    async def get_coin_history(self, coin_id: str,
-                               start: date = date(year=2009, month=1, day=1),  # it doesnt accept anything before
-                               end: date = date.today(),
-                               limit: int = 5000,
-                               quote: str = "usd",
-                               interval: str = '1d'):
-        return await self.with_limit(self._get_coin_history, coin_id, start, end, limit, quote, interval)
+    async def get_events(self, coin_id: str):
+        return await self.with_limit(self._get_events, coin_id)
 
-    async def _get_coin_history(self, coin_id: str, start: date, end: date, limit: int, quote: str, interval: str):
-        url = f'{self.host}/{self.version}/tickers/{coin_id}/historical'
+    async def _get_events(self, coin_id: str):
+        url = f'{self.host}/{self.version}/coins/{coin_id}/events'
         async with aiohttp.ClientSession(headers=self.headers) as session:
             print(f'[{time.asctime()}] Send request on {url}')
-            async with session.request('GET', url=url,
-                                       params={
-                                           'start': f'{start:%Y-%m-%d}',
-                                           'end': f'{end:%Y-%m-%d}',
-                                           'limit': limit,
-                                           'quote': quote,
-                                           'interval': interval
-                                       }) as res:
+            async with session.request('GET', url=url) as res:
 
                 print(f'[{time.asctime()}] {coin_id} fetched with status {res.status}')
                 json_object = await res.json()

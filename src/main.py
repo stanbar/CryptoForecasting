@@ -16,6 +16,9 @@ async def main():
                                       end=date(year=2018, month=1, day=1))
     print(ohlc)
 
+    events = await coinpaprika.get_events(coin_id='btc-bitcoin')
+    print(events)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
