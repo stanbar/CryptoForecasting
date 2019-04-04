@@ -2,13 +2,67 @@ import asyncio
 import time
 from asyncio import Lock
 from datetime import date
-
+from dataclasses import dataclass
 import aiohttp
+
+
+@dataclass
+class History:
+    timestamp: str
+    price: float
+    volume_24h: float
+    market_cap: float
+
+
+@dataclass
+class OHLC:
+    time_open: str
+    time_close: str
+    open: float
+    close: float
+    high: float
+    low: float
+    volume: int
+    market_cap: float
+
+
+@dataclass
+class Event:
+    id: str
+    date: date
+    date_to: date
+    name: str
+    description: str
+    is_conference: bool
+    link: str
+    proof_image_link: str
+
+
+def ohlc_decoder(obj):
+    if '__type__' in obj and obj['__type__'] == 'OHLC':
+        return OHLC(time_open=obj['time_open'],
+                    time_close=obj['time_close'],
+                    open=obj['open'],
+                    close=obj['close'],
+                    high=obj['high'],
+                    low=obj['low'],
+                    volume=obj['volume'],
+                    market_cap=obj['market_cap'])
+    return obj
+
+
+def history_decoder(obj):
+    if '__type__' in obj and obj['__type__'] == 'History':
+        return History(timestamp=obj['timestamp'],
+                       price=obj['price'],
+                       volume_24h=obj['volume_24h'],
+                       market_cap=obj['market_cap'])
+    return obj
 
 
 class CoinpaprikaApi:
 
-    def __init__(self, loop, host='https://api.coinpaprika.com', version='v1'):
+    def __init__(self, loop: asyncio.AbstractEventLoop, host='https://api.coinpaprika.com', version='v1'):
         self.loop = loop
         self.host = host
         self.lock = Lock(loop=loop)
@@ -22,10 +76,11 @@ class CoinpaprikaApi:
                                end: date = date.today(),
                                limit: int = 5000,
                                quote: str = "usd",
-                               interval: str = '1d'):
+                               interval: str = '1d') -> [History]:
         return await self.with_limit(self._get_coin_history, coin_id, start, end, limit, quote, interval)
 
-    async def _get_coin_history(self, coin_id: str, start: date, end: date, limit: int, quote: str, interval: str):
+    async def _get_coin_history(self, coin_id: str, start: date, end: date, limit: int, quote: str, interval: str) -> [
+        History]:
         url = f'{self.host}/{self.version}/tickers/{coin_id}/historical'
         async with aiohttp.ClientSession(headers=self.headers) as session:
             print(f'[{time.asctime()}] Send request on {url}')
@@ -39,6 +94,7 @@ class CoinpaprikaApi:
                                        }) as res:
 
                 print(f'[{time.asctime()}] {coin_id} fetched with status {res.status}')
+
                 json_object = await res.json()
 
                 if res.status == 404:  # no history found for this coin, don't raise exception
@@ -47,7 +103,7 @@ class CoinpaprikaApi:
                 if type(json_object) == dict:  # unhandled exception, raise
                     raise Exception(json_object['error'])
 
-                return json_object
+                return [History(**json) for json in json_object]
 
     async def get_ohlc(self, coin_id: str,
                        start: date = date(year=2009, month=1, day=1),  # it doesnt accept anything before
@@ -77,7 +133,7 @@ class CoinpaprikaApi:
                 if type(json_object) == dict:  # unhandled exception, raise
                     raise Exception(json_object['error'])
 
-                return json_object
+                return [OHLC(**json) for json in json_object]
 
     async def get_events(self, coin_id: str):
         return await self.with_limit(self._get_events, coin_id)
@@ -97,7 +153,7 @@ class CoinpaprikaApi:
                 if type(json_object) == dict:  # unhandled exception, raise
                     raise Exception(json_object['error'])
 
-                return json_object
+                return [Event(**json) for json in json_object]
 
     async def with_limit(self, func, *args, **kwargs):
         task = None
