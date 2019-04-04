@@ -17,15 +17,14 @@ class CoinpaprikaApi:
         self.request_second = 0
         self.headers = {'Accept': 'application/json', 'Accept-Charset': 'utf-8'}
 
-    async def get_ohlc(self, *args, **kwargs):
-        return await self.with_limit(self._get_ohlc, *args, **kwargs)
+    async def get_ohlc(self, coin_id: str,
+                       start: date = date(year=2009, month=1, day=1),  # it doesnt accept anything before
+                       end: date = date.today(),
+                       limit: int = 365,
+                       quote: str = "usd"):
+        return await self.with_limit(self._get_ohlc, coin_id, start, end, limit, quote)
 
-    async def _get_ohlc(self,
-                        coin_id: str,
-                        start: date = date(year=2009, month=1, day=1),  # it doesnt accept anything before
-                        end: date = date.today(),
-                        limit: int = 365,
-                        quote: str = "usd"):
+    async def _get_ohlc(self, coin_id: str, start: date, end: date, limit: int, quote: str):
         url = f'{self.host}/{self.version}/coins/{coin_id}/ohlcv/historical'
         async with aiohttp.ClientSession(headers=self.headers) as session:
             print(f'[{time.asctime()}] Send request on {url}')
@@ -48,16 +47,15 @@ class CoinpaprikaApi:
 
                 return json_object
 
-    async def get_coin_history(self, *args, **kwargs):
-        return await self.with_limit(self._get_coin_history, *args, **kwargs)
+    async def get_coin_history(self, coin_id: str,
+                               start: date = date(year=2009, month=1, day=1),  # it doesnt accept anything before
+                               end: date = date.today(),
+                               limit: int = 5000,
+                               quote: str = "usd",
+                               interval: str = '1d'):
+        return await self.with_limit(self._get_coin_history, coin_id, start, end, limit, quote, interval)
 
-    async def _get_coin_history(self,
-                                coin_id: str,
-                                start: date = date(year=2009, month=1, day=1),  # it doesnt accept anything before
-                                end: date = date.today(),
-                                limit: int = 5000,
-                                quote: str = "usd",
-                                interval: str = '1d'):
+    async def _get_coin_history(self, coin_id: str, start: date, end: date, limit: int, quote: str, interval: str):
         url = f'{self.host}/{self.version}/tickers/{coin_id}/historical'
         async with aiohttp.ClientSession(headers=self.headers) as session:
             print(f'[{time.asctime()}] Send request on {url}')
