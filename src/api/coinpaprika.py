@@ -2,20 +2,19 @@ import asyncio
 import time
 from asyncio import Lock
 from datetime import date
-from dataclasses import dataclass
+from typing import NamedTuple
+
 import aiohttp
 
 
-@dataclass
-class History:
+class History(NamedTuple):
     timestamp: str
     price: float
     volume_24h: float
     market_cap: float
 
 
-@dataclass
-class OHLC:
+class OHLC(NamedTuple):
     time_open: str
     time_close: str
     open: float
@@ -26,8 +25,7 @@ class OHLC:
     market_cap: float
 
 
-@dataclass
-class Event:
+class Event(NamedTuple):
     id: str
     date: date
     date_to: date
