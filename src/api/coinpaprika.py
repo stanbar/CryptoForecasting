@@ -38,28 +38,6 @@ class Event(NamedTuple):
     proof_image_link: str
 
 
-def ohlc_decoder(obj):
-    if '__type__' in obj and obj['__type__'] == 'OHLC':
-        return OHLC(time_open=obj['time_open'],
-                    time_close=obj['time_close'],
-                    open=obj['open'],
-                    close=obj['close'],
-                    high=obj['high'],
-                    low=obj['low'],
-                    volume=obj['volume'],
-                    market_cap=obj['market_cap'])
-    return obj
-
-
-def history_decoder(obj):
-    if '__type__' in obj and obj['__type__'] == 'History':
-        return History(timestamp=obj['timestamp'],
-                       price=obj['price'],
-                       volume_24h=obj['volume_24h'],
-                       market_cap=obj['market_cap'])
-    return obj
-
-
 class CoinpaprikaApi:
 
     def __init__(self, loop: asyncio.AbstractEventLoop, host='https://api.coinpaprika.com', version='v1'):
