@@ -1,9 +1,10 @@
 # https://api.coinpaprika.com/
 
 import asyncio
+import itertools
 import time
 from asyncio import Lock
-from datetime import date
+from datetime import date, timedelta
 from typing import NamedTuple
 
 import aiohttp
@@ -23,7 +24,6 @@ class OHLC(NamedTuple):
     close: float
     high: float
     low: float
-    volume: int
     market_cap: float
 
 
@@ -70,7 +70,7 @@ class CoinpaprikaApi:
                                            'quote': quote,
                                            'interval': interval
                                        }) as res:
-
+                print(f'[{time.asctime()}] Receive response from {res.url}')
                 print(f'[{time.asctime()}] {coin_id} fetched with status {res.status}')
 
                 json_object = await res.json()
@@ -86,14 +86,26 @@ class CoinpaprikaApi:
     async def get_ohlc(self, coin_id: str,
                        start: date = date(year=2009, month=1, day=1),  # it doesnt accept anything before
                        end: date = date.today(),
-                       limit: int = 365,
                        quote: str = "usd"):
-        return await self.with_limit(self._get_ohlc, coin_id, start, end, limit, quote)
+
+        limit = (end - start).days
+        if limit <= 365:
+            return await self.with_limit(self._get_ohlc, coin_id, start, end, limit, quote)
+        else:
+            # loop.run(None, send_batch_update, db, coins[i:i + 365])
+
+            quotes = [await self.with_limit(self._get_ohlc, coin_id, start + timedelta(days=i),
+                                            start + timedelta(days=i + 365),
+                                            365,
+                                            quote) for i in range(0, (end - start).days, 365)]
+
+            return list(itertools.chain(*quotes))
 
     async def _get_ohlc(self, coin_id: str, start: date, end: date, limit: int, quote: str):
+
         url = f'{self.host}/{self.version}/coins/{coin_id}/ohlcv/historical'
         async with aiohttp.ClientSession(headers=self.headers) as session:
-            print(f'[{time.asctime()}] Send request on {url}')
+            print(f'[{time.asctime()}] Sending request request on {url}')
             async with session.request('GET', url=url,
                                        params={
                                            'start': f'{start:%Y-%m-%d}',
@@ -101,7 +113,7 @@ class CoinpaprikaApi:
                                            'limit': limit,
                                            'quote': quote
                                        }) as res:
-
+                print(f'[{time.asctime()}] Receive response from {res.url}')
                 print(f'[{time.asctime()}] {coin_id} fetched with status {res.status}')
                 json_object = await res.json()
 
@@ -111,7 +123,14 @@ class CoinpaprikaApi:
                 if type(json_object) == dict:  # unhandled exception, raise
                     raise Exception(json_object['error'])
 
-                return [OHLC(**json) for json in json_object]
+                return [OHLC(**self.normalize(json)) for json in json_object]
+
+    def normalize(self, json):
+        try:
+            dict.pop(json, 'volume')
+        except KeyError:
+            return json
+        return json
 
     async def get_events(self, coin_id: str):
         return await self.with_limit(self._get_events, coin_id)
