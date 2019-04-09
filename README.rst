@@ -1,8 +1,8 @@
 Forecasting Cryptocurrency price
-=======================
+================================
 
 .. image:: images/candlesticks.jpg
-    :align: left
+    :width: 45 %
 
 .. image:: images/mix_all.jpg
-    :align: right
+    :width: 45 %
