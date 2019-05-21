@@ -123,4 +123,3 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-src/bitcoin_market_data.csv

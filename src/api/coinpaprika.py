@@ -50,7 +50,7 @@ class CoinpaprikaApi:
         self.headers = {'Accept': 'application/json', 'Accept-Charset': 'utf-8'}
 
     async def get_coin_history(self, coin_id: str,
-                               start: date = date(year=2009, month=1, day=1),  # it doesnt accept anything before
+                               start: date = date(year=2013, month=4, day=28),  # it doesnt accept anything before
                                end: date = date.today(),
                                limit: int = 5000,
                                quote: str = "usd",
