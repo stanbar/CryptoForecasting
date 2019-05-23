@@ -71,105 +71,76 @@ def plot(x_list, y_list, y_list2, chart_name):
     plt.plot(x_list, y_list2, label='line2')
     plt.show()
 
-def build_model():
-    data_2018 = pd.read_csv('maybe/2018.csv', sep=';')
+data_2018 = pd.read_csv('maybe/2018.csv', sep=';')
 
-    total_data = pd.concat([data_2018]).iloc[:, 7].values
+total_data = pd.concat([data_2018]).iloc[:, 7].values
 
-    #get every 10th minute
-    data = total_data[0::10]
+#get every 10th minute
+total_data = total_data[0::10]
 
-    training_set_size = int(0.9*total_data.size)
-    val_set_size = training_set_size + int(0.05*total_data.size)
-    test_set_size = val_set_size + int(0.05*total_data.size) + 1
+train_set_size = int(0.9*total_data.size)
+val_set_size = train_set_size + int(0.05*total_data.size)
+test_set_size = val_set_size + int(0.05*total_data.size) + 1
 
-    training_set = total_data[:training_set_size]
-    val_set = total_data[training_set_size:val_set_size]
-    test_set = total_data[val_set_size:test_set_size]
+train_set = total_data[:train_set_size]
+val_set = total_data[train_set_size:val_set_size]
+test_set = total_data[val_set_size:test_set_size]
 
-    #plot_acf(total_data)
-    #pyplot.show()
+train_scaller = MinMaxScaler(feature_range=(0, 1))
+train_set = train_set.reshape(-1, 1)
+train_set = train_scaller.fit_transform(train_set)
 
-    sc = MinMaxScaler(feature_range=(0, 1))
-    training_set = training_set.reshape(-1, 1)
-    training_set = sc.fit_transform(training_set)
+val_scaller = MinMaxScaler(feature_range=(0, 1))
+val_set = val_set.reshape(-1, 1)
+val_set = val_scaller.fit_transform(val_set)
 
-    sc2 = MinMaxScaler(feature_range=(0, 1))
-    val_set = val_set.reshape(-1, 1)
-    val_set = sc2.fit_transform(val_set)
+test_scaller = MinMaxScaler(feature_range=(0, 1))
+test_set = test_set.reshape(-1, 1)
+test_set = test_scaller.fit_transform(test_set)
 
-    sc3 = MinMaxScaler(feature_range=(0, 1))
-    test_set = test_set.reshape(-1, 1)
-    test_set = sc3.fit_transform(test_set)
+x_train = []
+y_train = []
+x_val = []
+y_val = []
+x_test = []
+y_test = []
 
-    X = []
-    Y = []
-    X_test = []
-    Y_test = []
+vector_size = 512
 
-    X_val = []
-    Y_val = []
+for i in range(vector_size, train_set.size):
+    x_train.append(train_set[i - vector_size:i, 0])
+    y_train.append(train_set[i, 0])
+x_train, y_train = np.array(x_train), np.array(y_train)
 
-    vector_size = 128
+for i in range(vector_size, val_set.size):
+    x_val.append(val_set[i - vector_size:i, 0])
+    y_val.append(val_set[i, 0])
+x_val, y_val = np.array(x_val), np.array(y_val)
 
-    for i in range(vector_size, int(training_set.size/8)):
-        X.append(training_set[i - vector_size:i, 0])
-        Y.append(training_set[i, 0])
-    X, Y = np.array(X), np.array(Y)
+for i in range(vector_size, test_set.size):
+    x_test.append(test_set[i - vector_size:i, 0])
+    y_test.append(test_set[i, 0])
+x_test, y_test = np.array(x_test), np.array(y_test)
 
-    for i in range(vector_size, val_set.size):
-        Y_val.append(val_set[i - vector_size:i, 0])
-        Y_val.append(val_set[i, 0])
-    X_val, Y_val = np.array(X_val), np.array(Y_val)
+x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
+x_val = np.reshape(x_val, (x_val.shape[0], x_val.shape[1], 1))
+x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], 1))
 
-    for i in range(vector_size, test_set.size):
-        X_test.append(test_set[i - vector_size:i, 0])
-        Y_test.append(test_set[i, 0])
-    X_test, Y_test = np.array(X_test), np.array(Y_test)
+regressor = Sequential()
 
-    X = np.reshape(X, (X.shape[0], X.shape[1], 1))
-    X_val = np.reshape(X_val, (X_val.shape[0], X_val.shape[1], 1))
-    X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
+regressor.add(LSTM(units=128, input_shape=(x_train.shape[1], x_train.shape[2])))
+regressor.add(Dropout(rate=0.2))
+regressor.add(Dense(1))
 
-    regressor = Sequential()
+regressor.compile(optimizer='adagrad', loss='mse')
 
-    regressor.add(LSTM(units=64, input_shape=(X.shape[1], 1)))
-    regressor.add(Dense(1))
-
-    regressor.compile(optimizer='adagrad', loss='mse', metrics=['mse'])
-
-    early_stopping = EarlyStopping(monitor='loss', min_delta=1)
-    regressor.fit(X, Y, epochs=10, batch_size=64, callbacks=[early_stopping], validation_data=(X_val, Y_val))
+early_stopping = EarlyStopping(monitor='val_loss', min_delta=1e-5)
+regressor.fit(x_train, y_train, epochs=10, batch_size=64, callbacks=[early_stopping], validation_data=(x_val, y_val))
 
 
-    # predictions = []
-    # for i in range(X_test.shape[0]):
-    #     x_for_single_test = X_test[i, :, :]
-    #     x_for_single_test = np.reshape(x_for_single_test, (1, 60, 1))
-    #     predicted_single = regressor.predict(x_for_single_test)
-    #     predicted_single = sc2.inverse_transform(predicted_single)
-    #     predictions.append(predicted_single[0, 0])
-    #     if i == 9999:
-    #         break
-    #     X_test[i + 1, 0, 0] = predicted_single
+predicted = regressor.predict(x_test)
+predicted = test_scaller.inverse_transform(predicted)
 
-    # x_series = []
-    # for i in range(0, len(predictions)):
-    #     x_series.append(i)
-    # plot(x_series, predictions, sc2.inverse_transform(Y_test.reshape(-1, 1)), "pred - in series")
-    # plot(x_series, Y_test, "real")
-    pass
-
-
-    predicted = regressor.predict(X_val)
-    predicted = sc2.inverse_transform(predicted)
-    pass
-
-    x_series = []
-    for i in range(0, predicted.shape[0]):
-        x_series.append(i)
-    plot(x_series, predicted, sc2.inverse_transform(Y.reshape(-1, 1)), "pred - one shot")
-    pass
-
-#download_dataset()
-build_model()
+x_series = list(range(0, predicted.shape[0] + 1))
+plot(x_series, predicted, test_scaller.inverse_transform(y_test.reshape(-1, 1)), "pred - one shot")
+pass
