@@ -59,6 +59,9 @@ class DataGeneratorSeq(object):
             self._cursor[b] = np.random.randint(0, min((b + 1) * self._segments, self._prices_length - 1))
 
 
+learning_from = 40500
+
+
 # using https://www.datacamp.com/community/tutorials/lstm-python-stock-market
 async def main():
     file_to_save = 'bitcoin_market_data.csv'
@@ -96,8 +99,8 @@ async def main():
     plt.show()
 
     mid_prices = df.loc[:, 'Price'].as_matrix()
-    train_data = mid_prices[:45000]
-    test_data = mid_prices[45000:]
+    train_data = mid_prices[:learning_from]
+    test_data = mid_prices[learning_from:]
 
     # scale the data to be between 0 and 1
     # When scaling remember! You normalize both test and train data with respect to training data
@@ -107,7 +110,7 @@ async def main():
     test_data = test_data.reshape(-1, 1)
 
     # Train the Scaler with training data and smooth data
-    smoothing_window_size = 8000
+    smoothing_window_size = 8500
     for di in range(0, train_data.size, smoothing_window_size):
         scaler.fit(train_data[di:di + smoothing_window_size, :])
         train_data[di:di + smoothing_window_size, :] = scaler.transform(train_data[di:di + smoothing_window_size, :])
@@ -129,7 +132,7 @@ async def main():
     all_mid_data = np.concatenate([train_data, test_data], axis=0)
 
     # Standard Average
-    window_size = 100  # todo play with this value
+    window_size = 500  # todo play with this value
     N = train_data.size
     std_avg_predictions = []
     std_avg_x = []
@@ -151,6 +154,7 @@ async def main():
     plt.figure(figsize=(18, 9))
     plt.plot(range(df.shape[0]), all_mid_data, color='b', label='True')
     plt.plot(range(window_size, N), std_avg_predictions, color='orange', label='Prediction')
+    plt.xticks(range(0, df.shape[0], 5000), df['Date'].loc[::5000], rotation=45)
     plt.xlabel('Date')
     plt.ylabel('Mid Price')
     plt.legend(fontsize=18)
@@ -277,10 +281,10 @@ async def main():
     print('\tAll done')
 
     # Running the LSTM
-    epochs = 10
+    epochs = 100
     valid_summary = 1  # Interval you make test predictions
     # todo play with this value
-    n_predict_once = 50  # Number of steps you continously predict for
+    n_predict_once = 1000  # Number of steps you continously predict for
 
     train_seq_length = train_data.size  # Full length of the training data
 
@@ -305,8 +309,9 @@ async def main():
     x_axis_seq = []
 
     # Points you start your test predictions from
-    test_points_seq = np.arange(45000, 52500, 50).tolist()  # todo play with this values
+    test_points_seq = np.arange(learning_from, 52500, 1000).tolist()  # numer of prediction lanes
 
+    results = list()
     for ep in range(epochs):
 
         # ========================= Training =====================================
@@ -333,10 +338,8 @@ async def main():
             # The average loss
             if (ep + 1) % valid_summary == 0:
                 print('Average loss at step %d: %f' % (ep + 1, average_loss))
-
             train_mse_ot.append(average_loss)
 
-            average_loss = 0  # reset loss
 
             predictions_seq = []
 
@@ -407,9 +410,30 @@ async def main():
             print('\tTest MSE: %.5f' % np.mean(mse_test_loss_seq))
             predictions_over_time.append(predictions_seq)
             print('\tFinished Predictions')
+            results.append({'epoch': ep + 1, 'average_loss': average_loss, 'test_mse': np.mean(mse_test_loss_seq)})
 
             # Visualizing the Predictions
             visualize_predictions(all_mid_data, df, predictions_over_time, x_axis_seq, ep)
+            plot_learning_results(results)
+            average_loss = 0  # reset loss
+
+    best_result_epoch = sorted(results, key=lambda result: result['test_mse'])[0]['epoch']
+    visualize_predictions(all_mid_data, df, predictions_over_time, x_axis_seq, best_result_epoch)
+
+
+def plot_learning_results(results: list):
+    plt.figure(figsize=(18, 9))
+    xaxis = [item['epoch'] for item in results]
+    print(f"xaxis: {xaxis}")
+    average_losses = [result['average_loss'] for result in results]
+    print(average_losses)
+    tests_mses = [result['test_mse'] for result in results]
+    print(tests_mses)
+    plt.plot(xaxis, average_losses, color='b', label='Average loss')
+    plt.plot(xaxis, tests_mses, color='r', label='Test MSE')
+    plt.xlabel('Epoch')
+    plt.legend(fontsize=18)
+    plt.show()
 
 
 def visualize_predictions(all_mid_data, df, predictions_over_time, x_axis_seq, ep):
@@ -427,7 +451,7 @@ def visualize_predictions(all_mid_data, df, predictions_over_time, x_axis_seq, e
     plt.title('Evolution of Test Predictions Over Time', fontsize=18)
     plt.xlabel('Date', fontsize=18)
     plt.ylabel('Mid Price', fontsize=18)
-    plt.xlim(2000, 2300)
+    plt.xlim(learning_from, 53000)
     plt.subplot(2, 1, 2)
     # Predicting the best test prediction you got
     plt.plot(range(df.shape[0]), all_mid_data, color='b')
@@ -436,7 +460,7 @@ def visualize_predictions(all_mid_data, df, predictions_over_time, x_axis_seq, e
     plt.title('Best Test Predictions Over Time', fontsize=18)
     plt.xlabel('Date', fontsize=18)
     plt.ylabel('Mid Price', fontsize=18)
-    plt.xlim(2000, 2300)
+    plt.xlim(learning_from, 53000)
     plt.show()
 
 
