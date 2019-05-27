@@ -82,7 +82,7 @@ train_set_size = int(0.9*total_data.size)
 val_set_size = train_set_size + int(0.05*total_data.size)
 test_set_size = val_set_size + int(0.05*total_data.size) + 1
 
-train_set = total_data[:train_set_size]
+train_set = total_data[:val_set_size]
 val_set = total_data[train_set_size:val_set_size]
 test_set = total_data[val_set_size:test_set_size]
 
@@ -128,19 +128,21 @@ x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], 1))
 
 regressor = Sequential()
 
-regressor.add(LSTM(units=128, input_shape=(x_train.shape[1], x_train.shape[2])))
+regressor.add(LSTM(units=64, input_shape=(x_train.shape[1], x_train.shape[2]), return_sequences=True))
+regressor.add(LSTM(units=64))
 regressor.add(Dropout(rate=0.2))
 regressor.add(Dense(1))
 
 regressor.compile(optimizer='adagrad', loss='mse')
 
 early_stopping = EarlyStopping(monitor='val_loss', min_delta=1e-5)
-regressor.fit(x_train, y_train, epochs=10, batch_size=64, callbacks=[early_stopping], validation_data=(x_val, y_val))
+regressor.fit(x_train, y_train, epochs=4, batch_size=64, callbacks=[early_stopping], validation_data=(x_val, y_val))
 
 
 predicted = regressor.predict(x_test)
 predicted = test_scaller.inverse_transform(predicted)
 
-x_series = list(range(0, predicted.shape[0] + 1))
+x_series = list(range(0, predicted.shape[0]))
+x_series = np.reshape(x_series, (x_series.__len__(), 1))
 plot(x_series, predicted, test_scaller.inverse_transform(y_test.reshape(-1, 1)), "pred - one shot")
 pass
