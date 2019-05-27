@@ -81,30 +81,30 @@ def plot(x_list, y_list, y_list2, chart_name):
 
 data_2018 = pd.read_csv('bitcoin_market_data.csv', sep=',')
 
-total_data = pd.concat([data_2018]).iloc[:, 2].values
+total_data = pd.concat([data_2018]).iloc[:, 2:5].values
 # todo how to add another feature like volume ?
 # get every 10th minute
 # todo why not all ?
-total_data = total_data[0::10]
+#total_data = total_data[0::10]
 
-train_set_size = int(0.9 * total_data.size)
-val_set_size = train_set_size + int(0.05 * total_data.size)
-test_set_size = val_set_size + int(0.05 * total_data.size) + 1
+train_set_size = int(0.9 * total_data.shape[0])
+val_set_size = train_set_size + int(0.05 * total_data.shape[0])
+test_set_size = val_set_size + int(0.05 * total_data.shape[0]) + 1
 
-train_set = total_data[:val_set_size]
-val_set = total_data[train_set_size:val_set_size]
-test_set = total_data[val_set_size:test_set_size]
+train_set = total_data[:val_set_size, :]
+val_set = total_data[train_set_size:val_set_size, :]
+test_set = total_data[val_set_size:test_set_size, :]
 
 train_scaller = MinMaxScaler(feature_range=(0, 1))
-train_set = train_set.reshape(-1, 1)
+#train_set = train_set.reshape(-1, 1)
 train_set = train_scaller.fit_transform(train_set)
 
 val_scaller = MinMaxScaler(feature_range=(0, 1))
-val_set = val_set.reshape(-1, 1)
+#val_set = val_set.reshape(-1, 1)
 val_set = val_scaller.fit_transform(val_set)
 
 test_scaller = MinMaxScaler(feature_range=(0, 1))
-test_set = test_set.reshape(-1, 1)
+#test_set = test_set.reshape(-1, 1)
 test_set = test_scaller.fit_transform(test_set)
 
 x_train = []
@@ -114,26 +114,27 @@ y_val = []
 x_test = []
 y_test = []
 
-vector_size = 512  # todo what is it ?
-for i in range(vector_size, train_set.size):
-    x_train.append(train_set[i - vector_size:i, 0])
+vector_size = 128  # todo what is it ?
+for i in range(vector_size, train_set.shape[0]):
+    x_train.append(train_set[i - vector_size:i, :])
     y_train.append(train_set[i, 0])
 
 x_train, y_train = np.array(x_train), np.array(y_train)
-for i in range(vector_size, val_set.size):
-    x_val.append(val_set[i - vector_size:i, 0])
+for i in range(vector_size, val_set.shape[0]):
+    x_val.append(val_set[i - vector_size:i, :])
     y_val.append(val_set[i, 0])
 
 x_val, y_val = np.array(x_val), np.array(y_val)
 
-for i in range(vector_size, test_set.size):
-    x_test.append(test_set[i - vector_size:i, 0])
+for i in range(vector_size, test_set.shape[0]):
+    x_test.append(test_set[i - vector_size:i, :])
     y_test.append(test_set[i, 0])
 
 x_test, y_test = np.array(x_test), np.array(y_test)
-x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
-x_val = np.reshape(x_val, (x_val.shape[0], x_val.shape[1], 1)) # todo tuple index out of range
-x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], 1))
+
+x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], x_train.shape[2]))
+x_val = np.reshape(x_val, (x_val.shape[0], x_val.shape[1], x_val.shape[2]))  #todo tuple index out of range
+x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], x_test.shape[2]))
 
 regressor = Sequential()
 
@@ -152,7 +153,17 @@ regressor.add(Dense(1))
 regressor.compile(optimizer='adagrad', loss='mse')
 
 early_stopping = EarlyStopping(monitor='val_loss', min_delta=1e-5)
-regressor.fit(x_train, y_train, epochs=4, batch_size=64, callbacks=[early_stopping], validation_data=(x_val, y_val))
+story = regressor.fit(x_train, y_train, epochs=10, batch_size=64, callbacks=[], validation_data=(x_val, y_val))
+
+plt.plot(story.history['loss'])
+plt.plot(story.history['val_loss'])
+plt.title('Model loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Val'], loc='upper left')
+plt.show()
+
+regressor.save('my_model.h5')
 
 predicted = regressor.predict(x_test)
 predicted = test_scaller.inverse_transform(predicted)
