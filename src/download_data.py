@@ -14,13 +14,17 @@ from statsmodels.graphics.tsaplots import plot_acf
 from matplotlib import pyplot
 import os
 
-
-chart_names = ["total-bitcoins", "market-price", "market-cap", "trade-volume", "blocks-size", "avg-block-size", "n-transactions-per-block", "median-confirmation-time", "hash-rate",
-               "difficulty", "miners-revenue", "transaction-fees", "transaction-fees-usd", "cost-per-transaction-percent", "cost-per-transaction", "n-unique-addresses", "n-transactions",
-               "n-transactions-total", "transactions-per-second", "mempool-size", "mempool-growth", "mempool-count", "utxo-count", "n-transactions-excluding-popular",
-               "n-transactions-excluding-chains-longer-than-100", "output-volume", "estimated-transaction-volume-usd", "estimated-transaction-volume", "my-wallet-n-users"]
+chart_names = ["total-bitcoins", "market-price", "market-cap", "trade-volume", "blocks-size", "avg-block-size",
+               "n-transactions-per-block", "median-confirmation-time", "hash-rate",
+               "difficulty", "miners-revenue", "transaction-fees", "transaction-fees-usd",
+               "cost-per-transaction-percent", "cost-per-transaction", "n-unique-addresses", "n-transactions",
+               "n-transactions-total", "transactions-per-second", "mempool-size", "mempool-growth", "mempool-count",
+               "utxo-count", "n-transactions-excluding-popular",
+               "n-transactions-excluding-chains-longer-than-100", "output-volume", "estimated-transaction-volume-usd",
+               "estimated-transaction-volume", "my-wallet-n-users"]
 
 chart_names2 = ["market-price"]
+
 
 def download_dataset():
     for chart_name in chart_names:
@@ -37,21 +41,24 @@ def download_dataset():
             y_list.append(y)
             f.writerow([value['x'], value['y']])
 
+
 def build_data():
     t_set = []
-    #avg_block_size = pd.read_csv('maybe/' + 'avg-block-size.csv').iloc[:, 1].values
-    #difficulty = pd.read_csv('maybe/' + 'difficulty.csv').iloc[:, 1].values
-    #hash_rate = pd.read_csv('maybe/' + 'hash-rate.csv').iloc[:, 1].values
-    #market_cap = pd.read_csv('maybe/' + 'market-cap.csv').iloc[:, 1].values
-    market_price = pd.read_csv('maybe/' + 'market-price.csv').iloc[:, 1].values # market price of bitcoin in minute interval
+    # avg_block_size = pd.read_csv('maybe/' + 'avg-block-size.csv').iloc[:, 1].values
+    # difficulty = pd.read_csv('maybe/' + 'difficulty.csv').iloc[:, 1].values
+    # hash_rate = pd.read_csv('maybe/' + 'hash-rate.csv').iloc[:, 1].values
+    # market_cap = pd.read_csv('maybe/' + 'market-cap.csv').iloc[:, 1].values
+    market_price = pd.read_csv('maybe/' + 'market-price.csv').iloc[:,
+                   1].values  # market price of bitcoin in minute interval
 
     for i in range(market_price.shape[0]):
-        #t_set.append([avg_block_size[i], difficulty[i], hash_rate[i], market_cap[i], market_price[i]])
+        # t_set.append([avg_block_size[i], difficulty[i], hash_rate[i], market_cap[i], market_price[i]])
         t_set.append(market_price[i])
 
     X = np.array(t_set)
-    #X = np.reshape(X, (X.shape[1], X.shape[0]))
+    # X = np.reshape(X, (X.shape[1], X.shape[0]))
     return X
+
 
 def plot(x_list, y_list, chart_name):
     fig = plt.figure()
@@ -65,22 +72,24 @@ def plot(x_list, y_list, chart_name):
     ax1.plot(x_list, y_list, c='r', label='data')
     plt.show()
 
-def plot(x_list, y_list, y_list2, chart_name):
 
+def plot(x_list, y_list, y_list2, chart_name):
     plt.plot(x_list, y_list, label='line1')
     plt.plot(x_list, y_list2, label='line2')
     plt.show()
 
-data_2018 = pd.read_csv('maybe/2018.csv', sep=';')
 
-total_data = pd.concat([data_2018]).iloc[:, 7].values
+data_2018 = pd.read_csv('bitcoin_market_data.csv', sep=',')
 
-#get every 10th minute
+total_data = pd.concat([data_2018]).iloc[:, 2].values
+# todo how to add another feature like volume ?
+# get every 10th minute
+# todo why not all ?
 total_data = total_data[0::10]
 
-train_set_size = int(0.9*total_data.size)
-val_set_size = train_set_size + int(0.05*total_data.size)
-test_set_size = val_set_size + int(0.05*total_data.size) + 1
+train_set_size = int(0.9 * total_data.size)
+val_set_size = train_set_size + int(0.05 * total_data.size)
+test_set_size = val_set_size + int(0.05 * total_data.size) + 1
 
 train_set = total_data[:val_set_size]
 val_set = total_data[train_set_size:val_set_size]
@@ -105,25 +114,25 @@ y_val = []
 x_test = []
 y_test = []
 
-vector_size = 512
-
+vector_size = 512  # todo what is it ?
 for i in range(vector_size, train_set.size):
     x_train.append(train_set[i - vector_size:i, 0])
     y_train.append(train_set[i, 0])
-x_train, y_train = np.array(x_train), np.array(y_train)
 
+x_train, y_train = np.array(x_train), np.array(y_train)
 for i in range(vector_size, val_set.size):
     x_val.append(val_set[i - vector_size:i, 0])
     y_val.append(val_set[i, 0])
+
 x_val, y_val = np.array(x_val), np.array(y_val)
 
 for i in range(vector_size, test_set.size):
     x_test.append(test_set[i - vector_size:i, 0])
     y_test.append(test_set[i, 0])
-x_test, y_test = np.array(x_test), np.array(y_test)
 
+x_test, y_test = np.array(x_test), np.array(y_test)
 x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
-x_val = np.reshape(x_val, (x_val.shape[0], x_val.shape[1], 1))
+x_val = np.reshape(x_val, (x_val.shape[0], x_val.shape[1], 1)) # todo tuple index out of range
 x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], 1))
 
 regressor = Sequential()
@@ -137,7 +146,6 @@ regressor.compile(optimizer='adagrad', loss='mse')
 
 early_stopping = EarlyStopping(monitor='val_loss', min_delta=1e-5)
 regressor.fit(x_train, y_train, epochs=4, batch_size=64, callbacks=[early_stopping], validation_data=(x_val, y_val))
-
 
 predicted = regressor.predict(x_test)
 predicted = test_scaller.inverse_transform(predicted)
