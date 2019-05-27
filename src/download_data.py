@@ -142,6 +142,13 @@ regressor.add(LSTM(units=64))
 regressor.add(Dropout(rate=0.2))
 regressor.add(Dense(1))
 
+#TODO:
+#    1. If there is time, try model with more input. (ex. volume)
+#    2. Try learning on different models -> choose number of layers, number of epochs untill the model overfits (val_loss > train_los)
+#    3. Graph losses
+#    4. Try to overfit the model -> longer training, more complicated model, less dropout layers, a lot of short 'vector_size'
+#    5. Create report.
+
 regressor.compile(optimizer='adagrad', loss='mse')
 
 early_stopping = EarlyStopping(monitor='val_loss', min_delta=1e-5)
