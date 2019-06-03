@@ -9,6 +9,7 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import LSTM
 from keras.layers import Dropout
+from keras.losses import mean_squared_error
 from keras.callbacks import EarlyStopping
 from statsmodels.graphics.tsaplots import plot_acf
 from matplotlib import pyplot
@@ -76,6 +77,7 @@ def plot(x_list, y_list, chart_name):
 def plot(x_list, y_list, y_list2, chart_name):
     plt.plot(x_list, y_list, label='line1')
     plt.plot(x_list, y_list2, label='line2')
+    plt.legend(['predicted', 'real'], loc='upper left')
     plt.show()
 
 
@@ -87,25 +89,34 @@ total_data = pd.concat([data_2018]).iloc[:, 2:5].values
 # todo why not all ?
 #total_data = total_data[0::10]
 
+#plot_acf(total_data[:, 3])
+#pyplot.show()
+
 train_set_size = int(0.9 * total_data.shape[0])
 val_set_size = train_set_size + int(0.05 * total_data.shape[0])
 test_set_size = val_set_size + int(0.05 * total_data.shape[0]) + 1
 
-train_set = total_data[:val_set_size, :]
+train_set = total_data[:train_set_size, :]
 val_set = total_data[train_set_size:val_set_size, :]
 test_set = total_data[val_set_size:test_set_size, :]
 
 train_scaller = MinMaxScaler(feature_range=(0, 1))
 #train_set = train_set.reshape(-1, 1)
-train_set = train_scaller.fit_transform(train_set)
+#train_set = train_scaller.fit_transform(train_set)
 
 val_scaller = MinMaxScaler(feature_range=(0, 1))
 #val_set = val_set.reshape(-1, 1)
-val_set = val_scaller.fit_transform(val_set)
+#val_set = val_scaller.fit_transform(val_set)
 
 test_scaller = MinMaxScaler(feature_range=(0, 1))
 #test_set = test_set.reshape(-1, 1)
-test_set = test_scaller.fit_transform(test_set)
+test_set2 = test_set.copy()[:,0]
+#test_set = test_scaller.fit_transform(test_set)
+
+test_scaller2 = MinMaxScaler(feature_range=(0, 1))
+test_set2 = test_set2.reshape(-1, 1)
+#test_set2 = test_scaller2.fit_transform(test_set2)
+
 
 x_train = []
 y_train = []
@@ -138,9 +149,8 @@ x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], x_test.shape[2]))
 
 regressor = Sequential()
 
-regressor.add(LSTM(units=64, input_shape=(x_train.shape[1], x_train.shape[2]), return_sequences=True))
-regressor.add(LSTM(units=64))
-regressor.add(Dropout(rate=0.2))
+regressor.add(LSTM(units=64, input_shape=(x_train.shape[1], x_train.shape[2])))
+regressor.add(Dropout(rate=0.3))
 regressor.add(Dense(1))
 
 #TODO:
@@ -152,8 +162,9 @@ regressor.add(Dense(1))
 
 regressor.compile(optimizer='adagrad', loss='mse')
 
-early_stopping = EarlyStopping(monitor='val_loss', min_delta=1e-5)
-story = regressor.fit(x_train, y_train, epochs=10, batch_size=64, callbacks=[], validation_data=(x_val, y_val))
+#early_stopping = EarlyStopping(monitor='val_loss', min_delta=1e-5)
+story = regressor.fit(x_train, y_train, epochs=20, batch_size=128, callbacks=[], validation_data=(x_val, y_val))
+#regressor.load_weights('model_overfit2.h5')
 
 plt.plot(story.history['loss'])
 plt.plot(story.history['val_loss'])
@@ -163,12 +174,17 @@ plt.xlabel('Epoch')
 plt.legend(['Train', 'Val'], loc='upper left')
 plt.show()
 
-regressor.save('my_model.h5')
+regressor.save('MODEL_SPLIT1.h5')
 
-predicted = regressor.predict(x_test)
-predicted = test_scaller.inverse_transform(predicted)
+predicted = regressor.predict(x_val)
+#predicted = test_scaller2.inverse_transform(predicted)
+
+evaluate = regressor.evaluate(x=x_val, y=y_val)
+
+print(evaluate)
 
 x_series = list(range(0, predicted.shape[0]))
 x_series = np.reshape(x_series, (x_series.__len__(), 1))
-plot(x_series, predicted, test_scaller.inverse_transform(y_test.reshape(-1, 1)), "pred - one shot")
+#plot(x_series, predicted, test_scaller2.inverse_transform(y_val.reshape(-1, 1)), "pred - one shot")
+plot(x_series, predicted, y_val.reshape(-1, 1), "pred - one shot")
 pass
