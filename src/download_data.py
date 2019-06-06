@@ -64,17 +64,14 @@ test_set2 = test_set.copy()[:, 0]
 
 train_scaller = MinMaxScaler(feature_range=(0, 1))
 if normalization:
-    train_set = train_set.reshape(-1, 1)
     train_set = train_scaller.fit_transform(train_set)
 
 val_scaller = MinMaxScaler(feature_range=(0, 1))
 if normalization:
-    val_set = val_set.reshape(-1, 1)
     val_set = val_scaller.fit_transform(val_set)
 
 test_scaller = MinMaxScaler(feature_range=(0, 1))
 if normalization:
-    test_set = test_set.reshape(-1, 1)
     test_set = test_scaller.fit_transform(test_set)
 
 test_scaller2 = MinMaxScaler(feature_range=(0, 1))
