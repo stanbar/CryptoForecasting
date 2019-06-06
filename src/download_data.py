@@ -122,8 +122,10 @@ x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], x_test.shape[2]))
 
 model = create_model()
 
+# train or load, don't do both !
 # train_model(model)
 model.load_weights('MODEL_SPLIT3.h5')
+
 predicted = model.predict(x_val)
 if normalization:
     predicted = test_scaller2.inverse_transform(predicted)
