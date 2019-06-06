@@ -1,19 +1,11 @@
-import urllib.request
-import csv
-import json
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import MinMaxScaler
-from keras.models import Sequential
 from keras.layers import Dense
-from keras.layers import LSTM
 from keras.layers import Dropout
-from keras.losses import mean_squared_error
-from keras.callbacks import EarlyStopping
-from statsmodels.graphics.tsaplots import plot_acf
-from matplotlib import pyplot
-import os
+from keras.layers import LSTM
+from keras.models import Sequential
+from sklearn.preprocessing import MinMaxScaler
 
 chart_names = ["total-bitcoins", "market-price", "market-cap", "trade-volume", "blocks-size", "avg-block-size",
                "n-transactions-per-block", "median-confirmation-time", "hash-rate",
