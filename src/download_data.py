@@ -108,14 +108,14 @@ for i in range(vector_size, test_set.shape[0]):
 x_test, y_test = np.array(x_test), np.array(y_test)
 
 x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], x_train.shape[2]))
-x_val = np.reshape(x_val, (x_val.shape[0], x_val.shape[1], x_val.shape[2]))  # todo tuple index out of range
+x_val = np.reshape(x_val, (x_val.shape[0], x_val.shape[1], x_val.shape[2]))
 x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], x_test.shape[2]))
 
 model = create_model()
 
 # train or load, don't do both !
 # train_model(model)
-model.load_weights('MODEL_SPLIT3.h5')
+model.load_weights('MODEL_SPLIT2.h5')
 
 predicted = model.predict(x_val)
 if normalization:
