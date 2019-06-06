@@ -60,6 +60,7 @@ test_set_size = val_set_size + int(0.05 * total_data.shape[0]) + 1
 train_set = total_data[:train_set_size, :]
 val_set = total_data[train_set_size:val_set_size, :]
 test_set = total_data[val_set_size:test_set_size, :]
+test_set2 = test_set.copy()[:, 0]
 
 train_scaller = MinMaxScaler(feature_range=(0, 1))
 if normalization:
@@ -74,13 +75,11 @@ if normalization:
 test_scaller = MinMaxScaler(feature_range=(0, 1))
 if normalization:
     test_set = test_set.reshape(-1, 1)
-test_set2 = test_set.copy()[:, 0]
-if normalization:
     test_set = test_scaller.fit_transform(test_set)
 
 test_scaller2 = MinMaxScaler(feature_range=(0, 1))
-test_set2 = test_set2.reshape(-1, 1)
 if normalization:
+    test_set2 = test_set2.reshape(-1, 1)
     test_set2 = test_scaller2.fit_transform(test_set2)
 
 x_train = []
