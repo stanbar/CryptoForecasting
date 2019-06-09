@@ -90,8 +90,8 @@ if __name__ == '__main__':
 
     train_set = total_data[:train_set_size, :]
     # val_set = total_data[:train_set_size:int(1/0.05), :]
-    val_set = total_data[train_set_size:val_set_size, :]
-    test_set = total_data[val_set_size:test_set_size, :]
+    val_set = total_data[train_set_size:val_set_start, :]
+    test_set = total_data[val_set_start:test_set_start, :]
     test_set2 = test_set.copy()[:, 0]
 
     train_scaller = MinMaxScaler(feature_range=(0, 1))
