@@ -47,6 +47,28 @@ def create_model():
     return model
 
 
+def train_model_for_metric(model, metric):
+    story = model.fit(x_train, y_train, epochs=10, batch_size=128, callbacks=[], validation_data=(x_val, y_val))
+
+
+    fig, ax1 = plt.subplots()
+    ax1.plot(story.history['loss'], 'b-')
+    ax1.plot(story.history['val_loss'], 'c-')
+    ax1.set_xlabel('Epoch')
+    ax1.set_ylabel('Loss', color='b')
+    ax1.tick_params('y', colors='b')
+
+    ax2 = ax1.twinx()
+    ax2.plot(story.history[metric], 'r-')
+    ax2.set_ylabel(metric, color='r')
+    ax2.tick_params('y', colors='r')
+    fig.tight_layout()
+    plt.legend(['Train', 'Val', metric], loc='upper left')
+    plt.title(metric)
+    fig.suptitle(metric)
+    plt.show()
+
+
 def train_model(model):
     story = model.fit(x_train, y_train, epochs=20, batch_size=128, callbacks=[], validation_data=(x_val, y_val))
     plt.plot(story.history['loss'])
@@ -143,8 +165,9 @@ if __name__ == '__main__':
     model = create_model()
 
     # train or load, don't do both !
-    # train_model(model)
-    model.load_weights('MODEL_SPLIT2.h5')
+
+    [train_model_for_metric(model, metric.__name__) for metric in my_metrics]
+    # model.load_weights('MODEL_SPLIT2.h5')
 
     predict(x_train, y_train, "Train")
     predict(x_val, y_val, "Val")
