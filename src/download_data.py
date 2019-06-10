@@ -63,9 +63,8 @@ def train_model_for_metric(model, metric):
     ax2.set_ylabel(metric, color='r')
     ax2.tick_params('y', colors='r')
     fig.tight_layout()
-    plt.legend(['Train', 'Val', metric], loc='upper left')
+    fig.legend(['Train', 'Val', metric], loc='upper left')
     plt.title(metric)
-    fig.suptitle(metric)
     plt.show()
 
 
