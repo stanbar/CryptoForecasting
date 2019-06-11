@@ -20,13 +20,15 @@ chart_names = ["total-bitcoins", "market-price", "market-cap", "trade-volume", "
 
 chart_names2 = ["market-price"]
 
-my_metrics = [metrics.binary_accuracy,
+my_metrics = [losses.mean_squared_error,
+              metrics.binary_accuracy,
               metrics.mean_absolute_error,
-              metrics.sparse_categorical_accuracy,
-              losses.mean_absolute_percentage_error,
-              losses.squared_hinge,
-              losses.hinge,
-              losses.poisson]
+              metrics.sparse_categorical_accuracy]
+my_losses = [
+    losses.mean_absolute_percentage_error,
+    losses.mean_squared_error,
+    losses.squared_hinge,
+    losses.poisson]
 
 
 def plot(x_list, y_list, y_list2, chart_name):
@@ -37,7 +39,7 @@ def plot(x_list, y_list, y_list2, chart_name):
     plt.show()
 
 
-def create_model():
+def create_model(x_train):
     model = Sequential()
     model.add(LSTM(units=64, input_shape=(x_train.shape[1], x_train.shape[2])))
     model.add(Dropout(rate=0.3))
@@ -47,28 +49,37 @@ def create_model():
     return model
 
 
-def train_model_for_metric(model, metric):
-    story = model.fit(x_train, y_train, epochs=10, batch_size=128, callbacks=[], validation_data=(x_val, y_val))
+def create_model_for_loss(loss, x_train):
+    model = Sequential()
+    model.add(LSTM(units=64, input_shape=(x_train.shape[1], x_train.shape[2])))
+    model.add(Dropout(rate=0.3))
+    model.add(Dense(1))
+    model.compile(optimizer='adagrad', loss=loss,
+                  metrics=my_metrics)
+    return model
 
+
+def train_model_for_loss(model, loss, x_train, y_train, x_val, y_val):
+    story = model.fit(x_train, y_train, epochs=10, batch_size=128, callbacks=[], validation_data=(x_val, y_val))
 
     fig, ax1 = plt.subplots()
     ax1.plot(story.history['loss'], 'b-')
     ax1.plot(story.history['val_loss'], 'c-')
     ax1.set_xlabel('Epoch')
-    ax1.set_ylabel('Loss', color='b')
+    ax1.set_ylabel(f'Loss: {loss}', color='b')
     ax1.tick_params('y', colors='b')
 
     ax2 = ax1.twinx()
-    ax2.plot(story.history[metric], 'r-')
-    ax2.set_ylabel(metric, color='r')
+    ax2.plot(story.history[losses.mean_squared_error.__name__], 'r-')
+    ax2.set_ylabel(losses.mean_squared_error.__name__, color='r')
     ax2.tick_params('y', colors='r')
     fig.tight_layout()
-    fig.legend(['Train', 'Val', metric], loc='upper left')
-    plt.title(metric)
+    fig.legend(['Train', 'Val', losses.mean_squared_error.__name__], loc='upper left')
+    plt.title(loss)
     plt.show()
 
 
-def train_model(model):
+def train_model(model, x_train, y_train, x_val, y_val):
     story = model.fit(x_train, y_train, epochs=20, batch_size=128, callbacks=[], validation_data=(x_val, y_val))
     plt.plot(story.history['loss'])
     plt.plot(story.history['val_loss'])
@@ -79,10 +90,10 @@ def train_model(model):
     plt.show()
 
 
-def predict(xs, ys, name):
+def predict(model, normalization, test_scaller, xs, ys, name):
     predicted = model.predict(xs)
     if normalization:
-        predicted = test_scaller2.inverse_transform(predicted)
+        predicted = test_scaller.inverse_transform(predicted)
     score = model.evaluate(x=xs, y=ys, verbose=2)
 
     # prepend scores with default loss function
@@ -94,12 +105,12 @@ def predict(xs, ys, name):
     x_series = list(range(0, predicted.shape[0]))
     x_series = np.reshape(x_series, (x_series.__len__(), 1))
     if normalization:
-        plot(x_series, predicted, test_scaller2.inverse_transform(ys.reshape(-1, 1)), name)
+        plot(x_series, predicted, test_scaller.inverse_transform(ys.reshape(-1, 1)), name)
     else:
         plot(x_series, predicted, ys.reshape(-1, 1), name)
 
 
-if __name__ == '__main__':
+def main():
     normalization = True
     data_2018 = pd.read_csv('bitcoin_market_data.csv', sep=',')
 
@@ -161,13 +172,22 @@ if __name__ == '__main__':
     x_val = np.reshape(x_val, (x_val.shape[0], x_val.shape[1], x_val.shape[2]))
     x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], x_test.shape[2]))
 
-    model = create_model()
+    for metric in my_losses:
+        model = create_model(x_train.copy())
 
-    # train or load, don't do both !
+        # train or load, don't do both !
 
-    [train_model_for_metric(model, metric.__name__) for metric in my_metrics]
-    # model.load_weights('MODEL_SPLIT2.h5')
+        train_model_for_loss(model, metric.__name__, x_train.copy(), y_train.copy(), x_val.copy(), y_val.copy())
+        # model.load_weights('MODEL_SPLIT2.h5')
 
-    predict(x_train, y_train, "Train")
-    predict(x_val, y_val, "Val")
-    predict(x_test, y_test, "Test")
+    for metric in my_losses:
+        model = create_model_for_loss(metric, x_train.copy())
+
+        # train or load, don't do both !
+
+        train_model_for_loss(model, metric.__name__, x_train.copy(), y_train.copy(), x_val.copy(), y_val.copy())
+        # model.load_weights('MODEL_SPLIT2.h5')
+
+
+if __name__ == '__main__':
+    main()
